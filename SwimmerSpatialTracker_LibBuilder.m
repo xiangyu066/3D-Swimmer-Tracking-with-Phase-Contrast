@@ -8,7 +8,7 @@ echo on
 %       1.) This code is limited in "ONE frame only contains ONE cell".
 % - Next modified:
 %       1.) Adaptive threshold
-% - Version: 2.0.0
+% - Version: 2.0.1
 % - Environments: Win10 (64-bit) / MATLAB 2019a (64-bit)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 echo off
@@ -64,7 +64,7 @@ for nFile = 1:nFiles
 end
 toc
 
-%% Classify neighborhood cells
+%% Put the maximal intensity into the center of the library database
 disp('Step (2/5): Analyze the centroid from maximal projection...'), tic
 
 CMxys = zeros(nFiles,2);
