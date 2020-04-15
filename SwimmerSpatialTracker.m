@@ -3,13 +3,13 @@ echo on
 % - Title: SwimmerSpatialTracker.m
 % - Author: XYZ
 % - Created date: April 9, 2020
-% - Modified date: April 15, 202
+% - Modified date: April 16, 202
 % - Notes:
 %       1.) This version have to manually choose target, and the target
 %       have to roughly put in the middle.
 % - Next modified:
 %       1.) Automatically chosen target
-% - Version: 1.1.0
+% - Version: 1.1.2
 % - Environments: Win10 (64-bit) / MATLAB 2019a (64-bit)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 echo off
@@ -30,6 +30,8 @@ pixelsize = 6.5 *(um);
 Obj_Mag = 40; % magnification of objective
 dt = 30 *(msec);
 nFrames = 100;
+sFrame = 1;
+eFrame = nFrames;
 
 %
 speed_upper = 100 *(um/sec);
@@ -38,9 +40,16 @@ outputdir = 'C:\Users\motorsgroup\Downloads\20200409\RP437';
 outputname = 'RP437_ROI052_BF-2';
 
 %% Preallocating 1vavriables and functions
-% Load depth library
-load('Library.mat')
-load('Library_Pos.mat')
+% load depth library
+load('C:\Users\motorsgroup\Downloads\20200409\RP437\Lib\Library.mat')
+load('C:\Users\motorsgroup\Downloads\20200409\RP437\Lib\Library_Pos.mat')
+
+% constrain library depth range
+Library(:,:,Library_Pos<-40*(um)) = '';
+Library_Pos(Library_Pos<-40*(um)) = '';
+Library(:,:,Library_Pos>50*(um)) = '';
+Library_Pos(Library_Pos>50*(um)) = '';
+
 Lib_Square = size(Library,1);
 nLayers = size(Library,3);
 
@@ -68,14 +77,14 @@ vSession = VideoWriter([outputdir,'\Analysis\',outputname,'.avi']);
 vSession.FrameRate = 33;
 open(vSession)
 
-figure(1), set(gcf,'WindowStyle','docked')
-for nFrame = 1:nFrames
+figure(1), set(gcf,'WindowStyle','docked'), tic
+for nFrame = sFrame:eFrame
     
     % read image
     origina = double(imread(inputfile,nFrame));
     
     % label tracking seeds
-    if (nFrame ==1)
+    if (nFrame ==sFrame)
         % human-made define target
         figure(2), imshow(origina,[])
         h = imrect(gca,[1, 1, search_Box_xy, search_Box_xy]);
@@ -109,14 +118,12 @@ for nFrame = 1:nFrames
     neworigina = neworigina./std2(neworigina);
     
     % using FFT to boost calculating correlation efficiency
-    tic
     Crrs = zeros(nLayers,4);
     for nLayer = sLayer:eLayer
         Crr = abs( ifft2( fft2(neworigina) .* conj(fft2(Lib_padding(:,:,nLayer))) ) );
         [shiftY,shiftX] = find(Crr==max(Crr(:)));
         Crrs(nLayer,:) = [shiftX,shiftY,nLayer,max(Crr(:)) ] ;
     end
-    toc
     
     % filt out of boundary
     if nFrame>1
@@ -148,7 +155,7 @@ for nFrame = 1:nFrames
     % real-time monitoring
     figure(1), clf(gcf), 
     
-    subplot 221, imshow(neworigina,[]), title(['nFrame = ', num2str(nFrame)])
+    subplot 221, imshow(neworigina,[]), title(['nFrame = ', num2str(nFrame), ' (', num2str((nFrame-1)*dt), ' msec)'])
     hold on, rectangle('position',[old_shiftX,old_shiftY,Lib_Square,Lib_Square],'edgecolor','r')
     
     subplot 222, plot3(Pos(1,1),Pos(1,2),Pos(1,3), '>','Color','r','MarkerSize',10,'MarkerFaceColor','#D9FFFF')
@@ -171,7 +178,7 @@ for nFrame = 1:nFrames
     frame = getframe(gcf);
     writeVideo(vSession, frame);
 end
-close(vSession)
+close(vSession), toc
 
 %% plot swimmer's trajectory
 figure(3), set(gcf,'WindowStyle','docked')
